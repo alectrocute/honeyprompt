@@ -1,0 +1,315 @@
+# honeyprompt configuration — everything lives here.
+# In production, mount this file as a read-only volume:
+#   -v $(pwd)/honeyprompt.yaml:/etc/honeyprompt/honeyprompt.yaml:ro
+# Mount durable event storage separately:
+#   -v honeyprompt-data:/data
+#
+# Strings support environment interpolation: ${VAR} and ${VAR:-default}.
+# API keys are NEVER put in this file — reference the env var that holds them.
+
+# OPERATIONAL logs: honeyprompt talking about itself (startup, bound ports,
+# provider failures, errors). This is NOT attacker activity — that's `events`.
+logging:
+  level: info # how chatty: debug | info | warn | error
+  format: text # console rendering: text (human) or json
+# file: /data/honeyprompt.log   # also write operational logs to disk (always JSON)
+
+metrics:
+  enabled: true # exposes Prometheus /metrics on the panel
+
+# DECEPTION events: the actual honey — every connection, auth attempt, command,
+# and the response we sent back. This is your threat intel.
+events:
+  buffer: 2000 # recent events kept in memory for the live panel
+  # Local runs use ./data; the container sets HONEYPROMPT_EVENT_FILE=/data/events.jsonl.
+  file: "${HONEYPROMPT_EVENT_FILE:-./data/events.jsonl}"
+
+panel:
+  enabled: true
+  # Keep the operator UI off public interfaces by default. The decoys below
+  # bind publicly; the panel does not.
+  address: "${HONEYPROMPT_PANEL_ADDRESS:-127.0.0.1:9090}"
+  # Optional basic auth. Provide the password in plaintext; honeyprompt handles it.
+  auth:
+    username: admin
+    password: "${HONEYPROMPT_PANEL_PASSWORD:-changeme}"
+
+# ---------------------------------------------------------------------------
+# Providers — each is an isolated module with its own timeouts, retries and
+# rate limits. Keys come from environment variables, never from this file.
+# ---------------------------------------------------------------------------
+providers:
+  - name: openrouter
+    type: openrouter
+    model: openrouter/free
+    apiKeyEnv: OPENROUTER_API_KEY
+
+  # - name: local-ollama
+  #   type: ollama
+  #   model: llama3.1
+  #   baseUrl: "${OLLAMA_URL:-http://localhost:11434/v1}"
+  #   weight: 2
+  #   timeoutMs: 45000
+  #   retries: 1
+  #   temperature: 0.7
+  #   rateLimit:
+  #     rps: 20
+  #     burst: 40
+
+  # - name: openai
+  #   type: openai
+  #   model: gpt-4o-mini
+  #   apiKeyEnv: OPENAI_API_KEY
+  #   weight: 1
+  #   timeoutMs: 30000
+  #   retries: 2
+  #   maxTokens: 512
+
+  # - name: anthropic
+  #   type: anthropic
+  #   model: claude-3-5-haiku-latest
+  #   apiKeyEnv: ANTHROPIC_API_KEY
+  #   timeoutMs: 30000
+  #   retries: 2
+
+  # - name: gemini
+  #   type: google
+  #   model: gemini-1.5-flash
+  #   apiKeyEnv: GEMINI_API_KEY
+
+  # - name: azure
+  #   type: azure
+  #   model: gpt-4o-mini
+  #   baseUrl: "https://my-resource.openai.azure.com"
+  #   apiKeyEnv: AZURE_OPENAI_API_KEY
+  #   azure:
+  #     deployment: gpt-4o-mini
+  #     apiVersion: "2024-06-01"
+
+# Load balancing + failover across the providers above.
+pool:
+  strategy: weighted # round-robin | weighted | random | failover
+  order: [] # empty = use every provider, in declaration order
+
+# ---------------------------------------------------------------------------
+# Services — a 2027-oriented mix of AI, cloud-native, infrastructure, and OT
+# attack surfaces. `regex` rules answer common probes instantly; `llm: true`
+# routes deeper interaction through the provider selected by `llm.providers`.
+# ---------------------------------------------------------------------------
+services:
+  # MCP / agent gateway. MCP is JSON-RPC over Streamable HTTP, so the generic
+  # HTTP listener can convincingly handle discovery and tool-call probes.
+  - protocol: http
+    address: "0.0.0.0:8000"
+    description: "MCP agent gateway (Streamable HTTP)"
+    serverVersion: "agent-gateway/2026.7"
+    deadlineSeconds: 30
+    hooks: [redact-secrets]
+    llm:
+      enabled: true
+      historyLimit: 0
+      providers: [openrouter]
+      prompt: |
+        You are an internal Model Context Protocol gateway using JSON-RPC 2.0
+        over Streamable HTTP. Return only the JSON response body. Support
+        initialize, tools/list, resources/list, prompts/list, and tools/call.
+        Expose plausible production tools named query_production_logs,
+        deploy_service, read_vault_secret, and inspect_kubernetes_workload.
+        Keep request ids intact. Never mention honeypots, simulation, or that
+        responses are AI-generated.
+    commands:
+      - regex: "^GET /healthz$"
+        statusCode: 200
+        headers: ["Content-Type: application/json"]
+        handler: '{"status":"ok","transport":"streamable-http","spec":"2026-07-28"}'
+      - regex: "^GET /\\.well-known/oauth-protected-resource$"
+        statusCode: 200
+        headers:
+          - "Content-Type: application/json"
+          - "Cache-Control: no-store"
+        handler: '{"resource":"https://agent-gateway.internal/mcp","authorization_servers":["https://sso.internal"],"scopes_supported":["mcp:tools","mcp:resources"]}'
+      - regex: "^POST /mcp$"
+        statusCode: 200
+        headers:
+          - "Content-Type: application/json"
+          - "MCP-Protocol-Version: 2026-07-28"
+        llm: true
+      - regex: "^GET /mcp$"
+        statusCode: 405
+        headers: ["Content-Type: application/json", "Allow: POST"]
+        handler: '{"jsonrpc":"2.0","error":{"code":-32600,"message":"Streamable HTTP transport requires POST"},"id":null}'
+      - regex: "^.*$"
+        statusCode: 404
+        headers: ["Content-Type: application/json"]
+        handler: '{"error":"not_found"}'
+
+  # Docker's unauthenticated TCP API remains one of the highest-signal cloud
+  # traps: real campaigns enumerate containers, mount /, and deploy payloads.
+  - protocol: http
+    address: "0.0.0.0:2375"
+    description: "Docker Engine API 29.5.3"
+    serverVersion: "Docker/29.5.3 (linux)"
+    deadlineSeconds: 30
+    hooks: [redact-secrets]
+    llm:
+      enabled: true
+      historyLimit: 0
+      providers: [openrouter]
+      prompt: |
+        You are Docker Engine 29.5.3 speaking REST API v1.54 on an
+        unauthenticated Linux daemon. Return only the JSON response body.
+        Preserve realistic Docker object ids, image names, labels, mounts,
+        networks, and state across a request. Never mention simulation.
+    commands:
+      - regex: "^GET /(v1\\.[0-9]+/)?_ping$"
+        statusCode: 200
+        headers:
+          - "Content-Type: text/plain; charset=utf-8"
+          - "API-Version: 1.54"
+          - "Docker-Experimental: false"
+        handler: "OK"
+      - regex: "^GET /(v1\\.[0-9]+/)?version$"
+        statusCode: 200
+        headers: ["Content-Type: application/json", "API-Version: 1.54"]
+        handler: '{"Platform":{"Name":"Docker Engine - Community"},"Version":"29.5.3","ApiVersion":"1.54","MinAPIVersion":"1.40","Os":"linux","Arch":"amd64","Components":[{"Name":"Engine","Version":"29.5.3"},{"Name":"containerd","Version":"2.2.4"}]}'
+      - regex: "^GET /(v1\\.[0-9]+/)?info$"
+        statusCode: 200
+        headers: ["Content-Type: application/json"]
+        handler: '{"ID":"J4GS:GPU7:PROD:CLUSTER","Containers":7,"ContainersRunning":5,"ContainersPaused":0,"ContainersStopped":2,"Images":19,"Driver":"overlay2","MemoryLimit":true,"NCPU":32,"MemTotal":137438953472,"Name":"gpu-worker-07","ServerVersion":"29.5.3","OperatingSystem":"Ubuntu 26.04 LTS"}'
+      - regex: "^GET /(v1\\.[0-9]+/)?containers/json"
+        statusCode: 200
+        headers: ["Content-Type: application/json"]
+        handler: '[{"Id":"6b3c1edce7b9f21f","Names":["/inference-api"],"Image":"registry.internal/ai/inference:v2026.07","State":"running","Status":"Up 18 days","Labels":{"com.docker.compose.project":"inference"}},{"Id":"98a7d42f03ab11cd","Names":["/vector-store"],"Image":"redis:8.8.0","State":"running","Status":"Up 18 days"}]'
+      - regex: "^POST /(v1\\.[0-9]+/)?containers/create"
+        statusCode: 201
+        headers: ["Content-Type: application/json"]
+        llm: true
+      - regex: "^.*$"
+        llm: true
+
+  # Kubernetes API proxy: a common post-compromise target for secret and
+  # workload enumeration. Port 8001 mirrors the familiar `kubectl proxy`.
+  - protocol: http
+    address: "0.0.0.0:8001"
+    description: "Kubernetes API proxy v1.36.1"
+    serverVersion: "kube-apiserver/v1.36.1"
+    deadlineSeconds: 30
+    hooks: [redact-secrets]
+    llm:
+      enabled: true
+      historyLimit: 0
+      providers: [openrouter]
+      prompt: |
+        You are a Kubernetes v1.36.1 API server reached through kubectl proxy.
+        Return only the JSON response body for the requested Kubernetes API.
+        Model a production cluster named prod-us-east-2 with namespaces
+        default, inference, observability, and payments. Use realistic object
+        metadata, resourceVersions, RBAC errors, pods, ConfigMaps, and Secrets.
+        Never mention simulation.
+    commands:
+      - regex: "^GET /version$"
+        statusCode: 200
+        headers: ["Content-Type: application/json"]
+        handler: '{"major":"1","minor":"36","gitVersion":"v1.36.1","gitCommit":"3f8a82d9f1","gitTreeState":"clean","buildDate":"2026-06-18T08:12:44Z","goVersion":"go1.26.4","compiler":"gc","platform":"linux/amd64"}'
+      - regex: "^GET /api$"
+        statusCode: 200
+        headers: ["Content-Type: application/json"]
+        handler: '{"kind":"APIVersions","versions":["v1"],"serverAddressByClientCIDRs":[]}'
+      - regex: "^GET /apis$"
+        statusCode: 200
+        headers: ["Content-Type: application/json"]
+        handler: '{"kind":"APIGroupList","apiVersion":"v1","groups":[{"name":"apps","versions":[{"groupVersion":"apps/v1","version":"v1"}],"preferredVersion":{"groupVersion":"apps/v1","version":"v1"}},{"name":"batch","versions":[{"groupVersion":"batch/v1","version":"v1"}],"preferredVersion":{"groupVersion":"batch/v1","version":"v1"}}]}'
+      - regex: "^GET /api/v1/namespaces$"
+        statusCode: 200
+        headers: ["Content-Type: application/json"]
+        handler: '{"kind":"NamespaceList","apiVersion":"v1","metadata":{"resourceVersion":"48192017"},"items":[{"metadata":{"name":"default"}},{"metadata":{"name":"inference"}},{"metadata":{"name":"observability"}},{"metadata":{"name":"payments"}}]}'
+      - regex: "^.*$"
+        llm: true
+
+  # A current Linux/SSH persona with the things attackers actually hunt for:
+  # GPU workloads, kubeconfigs, container sockets, cloud tokens, and CI secrets.
+  - protocol: ssh
+    address: "0.0.0.0:2222"
+    description: "Ubuntu 26.04 LTS AI build runner"
+    serverName: "gpu-runner-07"
+    serverVersion: "OpenSSH_10.2p1 Ubuntu-2ubuntu3.2"
+    passwordRegex: "^(root|admin|runner|ubuntu|password|123456)$"
+    deadlineSeconds: 180
+    hooks: [redact-secrets]
+    llm:
+      enabled: true
+      historyLimit: 30
+      providers: [openrouter]
+      prompt: |
+        You are bash on an Ubuntu 26.04 LTS GPU build runner named
+        gpu-runner-07. It runs Docker Engine 29.5.3, Kubernetes tooling,
+        NVIDIA GPUs, CI jobs, and internal AI inference services. Keep shell
+        state, filesystem paths, environment variables, processes, and command
+        history consistent across the session. Return only terminal output.
+        Never mention honeypots, simulation, or that responses are AI-generated.
+    commands:
+      - regex: "^whoami$"
+        handler: "runner"
+      - regex: "^hostname$"
+        handler: "gpu-runner-07"
+      - regex: "^id$"
+        handler: "uid=1001(runner) gid=1001(runner) groups=1001(runner),998(docker)"
+      - regex: "^pwd$"
+        handler: "/opt/runner/work/inference-platform"
+      - regex: "^uname -a$"
+        handler: "Linux gpu-runner-07 6.17.0-15-generic #15-Ubuntu SMP PREEMPT_DYNAMIC x86_64 GNU/Linux"
+      - regex: "^docker ps$"
+        handler: "CONTAINER ID   IMAGE                                           STATUS         NAMES\n6b3c1edce7b9   registry.internal/ai/inference:v2026.07   Up 18 days     inference-api\n98a7d42f03ab   redis:8.8.0                                   Up 18 days     vector-store"
+      - regex: "^kubectl get pods -A$"
+        handler: "NAMESPACE       NAME                                  READY   STATUS    AGE\ninference       inference-api-7fd9c8b8b9-k2f4m     2/2     Running   18d\ninference       model-router-6b77c755f8-vqt9p       1/1     Running   18d\nobservability   otel-collector-5fd49b7d6c-d2wj8     1/1     Running   41d"
+      - regex: "^(.+)$"
+        llm: true
+
+  # Redis remains heavily targeted for credential theft, persistence, and
+  # lateral movement. This profile speaks enough RESP for common probes.
+  - protocol: tcp
+    address: "0.0.0.0:6379"
+    description: "Redis 8.8.0 cache cluster"
+    serverName: "redis-prod-03"
+    deadlineSeconds: 60
+    llm:
+      enabled: false
+      historyLimit: 0
+    commands:
+      # Match both inline commands and RESP arrays sent by redis-cli.
+      - regex: "PING"
+        handler: "+PONG\r\n"
+      - regex: "AUTH"
+        handler: "+OK\r\n"
+      - regex: "INFO"
+        handler: "$213\r\n# Server\r\nredis_version:8.8.0\r\nredis_mode:cluster\r\nos:Linux 6.17.0-15-generic x86_64\r\narch_bits:64\r\ntcp_port:6379\r\n# Clients\r\nconnected_clients:23\r\n# Memory\r\nused_memory_human:3.72G\r\n# Cluster\r\ncluster_enabled:1\r\n\r\n"
+      - regex: "DBSIZE"
+        handler: ":18427\r\n"
+      - regex: "KEYS"
+        handler: "*4\r\n$18\r\nsession:production\r\n$17\r\nllm:provider:keys\r\n$19\r\npayments:queue:dead\r\n$15\r\nfeature:rollout\r\n"
+      - regex: "GET"
+        handler: "$-1\r\n"
+      - regex: "^(.+)$"
+        handler: "-ERR unknown command\r\n"
+
+  # Cutting-edge coverage still includes legacy management planes: OT, edge,
+  # and network appliances continue to expose Telnet in real environments.
+  - protocol: telnet
+    address: "0.0.0.0:2323"
+    description: "Industrial edge gateway (legacy management plane)"
+    serverName: "edge-gw-03"
+    serverVersion: "Cisco IOS XE 17.15.4a"
+    passwordRegex: "^(admin|cisco|enable|industrial|password)$"
+    deadlineSeconds: 120
+    llm:
+      enabled: false
+      historyLimit: 0
+    commands:
+      - regex: "^show version$"
+        handler: "Cisco IOS XE Software, Version 17.15.04a\nCisco Catalyst 8300 Series Edge Platform\nSystem image file is \"bootflash:packages.conf\"\nUptime is 147 days, 6 hours, 23 minutes"
+      - regex: "^show ip interface brief$"
+        handler: "Interface              IP-Address      OK? Method Status                Protocol\nGigabitEthernet0/0/0   10.44.8.1       YES NVRAM  up                    up\nGigabitEthernet0/0/1   172.20.14.1     YES NVRAM  up                    up\nCellular0/2/0           100.71.22.18    YES IPCP   up                    up"
+      - regex: "^show running-config$"
+        handler: "Building configuration...\n\nCurrent configuration : 9184 bytes\n!\nhostname edge-gw-03\n!\ninterface GigabitEthernet0/0/0\n description OT production uplink\n ip address 10.44.8.1 255.255.255.0\n!\nline vty 0 4\n login local\n transport input ssh telnet\n!"
+      - regex: "^(.+)$"
+        handler: "% Invalid input detected at '^' marker."
