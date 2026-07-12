@@ -18,8 +18,11 @@ services:
       - "127.0.0.1:9090:9090" # operator panel: host-local only
     volumes:
       - "./honeyprompt.yaml:/etc/honeyprompt/honeyprompt.yaml:ro"
-      - "./data:/data"
+      - "honeyprompt-data:/data"
     security_opt:
       - "no-new-privileges:true"
     cap_drop:
       - ALL
+
+volumes:
+  honeyprompt-data:
