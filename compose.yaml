@@ -1,0 +1,28 @@
+services:
+  honeyprompt:
+    image: "${HONEYPROMPT_IMAGE:-alectrocute/honeyprompt:latest}"
+    restart: unless-stopped
+    init: true
+    environment:
+      HONEYPROMPT_PANEL_ADDRESS: "0.0.0.0:9090"
+      HONEYPROMPT_PANEL_PASSWORD: "${HONEYPROMPT_PANEL_PASSWORD:?set HONEYPROMPT_PANEL_PASSWORD in .env}"
+      OPENROUTER_API_KEY: "${OPENROUTER_API_KEY:?set OPENROUTER_API_KEY in .env}"
+    ports:
+      - "2222:2222" # SSH build runner
+      - "2323:2323" # OT Telnet
+      - "2375:2375" # Docker API
+      - "6379:6379" # Redis
+      - "8000:8000" # MCP gateway
+      - "8001:8001" # Kubernetes API proxy
+      - "127.0.0.1:9090:9090" # operator panel: host-local only
+    # - "9090:9090" # operator panel: exposed
+    volumes:
+      - "./honeyprompt.yaml:/etc/honeyprompt/honeyprompt.yaml:ro"
+      - "honeyprompt-data:/data"
+    security_opt:
+      - "no-new-privileges:true"
+    cap_drop:
+      - ALL
+
+volumes:
+  honeyprompt-data:

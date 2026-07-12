@@ -1,0 +1,10 @@
+.git
+.github
+dist
+node_modules
+*.md
+.env
+.env.*
+!.env.example
+screenshot.png
+banner.png
