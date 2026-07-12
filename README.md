@@ -139,6 +139,9 @@ reuse, the CVEs they assume you haven't patched. Static honeypots break characte
 runs a command the author didn't anticipate. honeyprompt hands that moment to an LLM, so the shell
 answers `dmesg | tail` or `cat /etc/shadow` the way a real one would, and the session keeps going.
 
+Check out Adel Karimi's excellent DEF CON 32 presentation on Galah, (the first?) LLM honeypot, which
+inspired this project: <https://www.youtube.com/watch?v=XGsm4Qcc_Ag>
+
 ## What gets logged: two separate streams
 
 This is the part worth understanding up front, because the two are deliberately kept apart:
