@@ -16,6 +16,9 @@ default deployment: seven LLM-backed decoys, durable event storage and the opera
 **1. Grab the default config, compose file, and env template:**
 
 ```bash
+# if you don't have Docker:
+# curl -fsSL get.docker.com -o get-docker.sh && sh get-docker.sh
+
 mkdir honeypot && cd honeypot
 wget https://raw.githubusercontent.com/alectrocute/honeyprompt/main/honeyprompt.yaml
 wget https://raw.githubusercontent.com/alectrocute/honeyprompt/main/compose.yaml
