@@ -53,7 +53,6 @@ docker compose up -d
 **4. Poke it:**
 
 ```bash
-curl http://localhost/                # default nginx welcome page (no LLM)
 ssh -p 2222 root@localhost            # password: root — then type anything
 curl http://localhost:2375/v1.54/containers/json   # "exposed" Docker API
 ```
