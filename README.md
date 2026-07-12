@@ -328,12 +328,17 @@ honeyprompt help
 `--config` defaults to `./honeyprompt.yaml`, or `$HONEYPROMPT_CONFIG` if set (the container sets it
 to `/etc/honeyprompt/honeyprompt.yaml`).
 
-## A word of warning
+## A word of warning for users & contributors
 
 This is a tool for luring and studying attackers on infrastructure **you own or are authorized to
 test**. Exposing decoy services still means exposing services; run it on isolated hosts, keep it
 patched, and don't point it at anything you can't afford to have probed. Deception is not a
 substitute for actually securing the real thing.
+
+If you want to contribute to this project and use an AI agent or heavily lean on generative code,
+that's totally fine—but you _WILL_ be personally quizzed on every single line of code you offer and
+if you don't demonstrate immediate, AI-free understanding, your _ENTIRE_ contribution will be
+rejected and scrapped.
 
 ## License
 
