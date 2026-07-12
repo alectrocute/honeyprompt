@@ -1,15 +1,17 @@
 # honeyprompt
 
-The honeypot that talks back. Introducing `honeyprompt`, the LLM-first deception framework made
-by/for web developers. Supports any major cloud and local LLM providers. SSH, HTTP, TLS, TCP, Telnet
-and more. It ships as a small container (and a single static binary), and keeps every knob in one
-`honeyprompt.yaml`. No plugins to compile, no database to run and no agent to install.
+The honeypot that talks back.
+
+Introducing `honeyprompt`, the LLM-first deception framework made by/for web developers. Supports
+any major cloud and local LLM providers. SSH, HTTP, TLS, TCP, Telnet and more. It ships as a small
+container (and a single static binary) and keeps every knob in one `honeyprompt.yaml`. No plugins to
+compile, no database to run, no agent to install.
 
 ## Quick start
 
 For easiest setup in 2026, we recommend Docker and OpenRouter/`openrouter/free` as the LLM provider.
 All major cloud and local LLM providers are supported. Three files and one command stand up the full
-default deployment — seven LLM-backed decoys, durable event storage and the operator panel.
+default deployment: seven LLM-backed decoys, durable event storage and the operator panel.
 
 **1. Grab the default config, compose file, and env template:**
 
