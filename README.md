@@ -49,7 +49,9 @@ curl http://localhost:2375/v1.54/containers/json   # "exposed" Docker API
 ```
 
 **5. Watch it happen** in the read-only panel at <http://127.0.0.1:9090> (sign in as `admin` with
-your panel password). Every connection, credential, and command streams in live.
+your panel password). Every connection, credential, and command streams in live. If you are deployed
+to a remote host, you'll need to expose the `:9090` port in [`compose.yaml`](./compose.yaml). This
+is not recommended for production deployments.
 
 > Pin a numbered release instead of `latest` for production deployments — set `HONEYPROMPT_IMAGE` in
 > `.env`.
