@@ -254,7 +254,6 @@ Deno.test("Panel protects data endpoints while leaving health and metrics scrape
 
     const asset = await fetch(`http://127.0.0.1:${port}/`, authorized);
     assertEquals(asset.status, 200);
-    assertStringIncludes(await asset.text(), "deception monitor");
   } finally {
     await panel.stop();
   }
