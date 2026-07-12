@@ -39,14 +39,9 @@ panel:
 # rate limits. Keys come from environment variables, never from this file.
 # ---------------------------------------------------------------------------
 providers:
-  - name: openrouter-generic-free
+  - name: openrouter-free
     type: openrouter
     model: openrouter/free
-    apiKeyEnv: OPENROUTER_API_KEY
-
-  - name: openrouter-gemma-free
-    type: openrouter
-    model: google/gemma-4-26b-a4b-it-20260403:free
     apiKeyEnv: OPENROUTER_API_KEY
 
   # - name: local-ollama
@@ -126,7 +121,7 @@ services:
     llm:
       enabled: true
       historyLimit: 0
-      providers: [openrouter-gemma-free]
+      providers: [openrouter-free]
       prompt: |
         You are the web server of an internal corporate
         intranet accidentally exposed to the internet. For every request,
@@ -188,7 +183,7 @@ services:
     llm:
       enabled: true
       historyLimit: 0
-      providers: [openrouter-generic-free]
+      providers: [openrouter-free]
       prompt: |
         You are an internal Model Context Protocol gateway using JSON-RPC 2.0
         over Streamable HTTP. Return only the JSON response body. Support
@@ -234,7 +229,7 @@ services:
     llm:
       enabled: true
       historyLimit: 0
-      providers: [openrouter-generic-free]
+      providers: [openrouter-free]
       prompt: |
         You are Docker Engine 29.5.3 speaking REST API v1.54 on an
         unauthenticated Linux daemon. Return only the JSON response body.
@@ -278,7 +273,7 @@ services:
     llm:
       enabled: true
       historyLimit: 0
-      providers: [openrouter-generic-free]
+      providers: [openrouter-free]
       prompt: |
         You are a Kubernetes v1.36.1 API server reached through kubectl proxy.
         Return only the JSON response body for the requested Kubernetes API.
@@ -319,7 +314,7 @@ services:
     llm:
       enabled: true
       historyLimit: 30
-      providers: [openrouter-generic-free]
+      providers: [openrouter-free]
       prompt: |
         You are bash on an Ubuntu 26.04 LTS GPU build runner named
         gpu-runner-07. It runs Docker Engine 29.5.3, Kubernetes tooling,
