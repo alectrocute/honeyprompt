@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Format, lint, type-check, test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: "2.9.2"
+
+      - name: Check formatting
+        run: deno fmt --check
+
+      - name: Lint
+        run: deno lint
+
+      - name: Type-check
+        run: deno check src/main.ts
+
+      - name: Test
+        run: deno test --allow-net --allow-read --allow-write --allow-env
+
+      - name: Validate example config
+        run: deno run --allow-read --allow-env src/main.ts validate --config honeyprompt.yaml
+
+      - name: Validate Compose deployment
+        env:
+          HONEYPROMPT_PANEL_PASSWORD: ci-only
+          OPENROUTER_API_KEY: ci-only
+        run: docker compose config --quiet
+
+  compile:
+    name: Compile binary
+    runs-on: ubuntu-latest
+    needs: quality
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: "2.9.2"
+      - name: Compile
+        run: deno task compile
+      - name: Smoke test binary
+        run: ./dist/honeyprompt version
+
+  docker:
+    name: Build Docker image
+    runs-on: ubuntu-latest
+    needs: quality
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t alectrocute/honeyprompt:ci .
+      - name: Smoke test image
+        run: docker run --rm alectrocute/honeyprompt:ci version

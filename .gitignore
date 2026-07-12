@@ -1,0 +1,25 @@
+# Build output
+/dist/
+
+# Node modules (only present when nodeModulesDir is enabled)
+/node_modules/
+
+# Local secrets / env
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+/logs/
+/data/
+
+# OS cruft
+.DS_Store
+Thumbs.db
+
+# Editor
+.idea/
+*.swp
+
+PLAN.md
