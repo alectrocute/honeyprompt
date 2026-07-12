@@ -81,9 +81,6 @@ ships profiles for:
 - **Industrial edge / OT** — an intentionally legacy Telnet management plane, because modern defense
   still has to catch attacks against old infrastructure.
 
-The versions are contemporary, but the personas intentionally look useful and slightly exposed. A
-good decoy should attract interaction, not advertise perfect hardening.
-
 ### Running without an LLM
 
 > [!IMPORTANT]
