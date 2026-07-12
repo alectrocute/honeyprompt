@@ -1,6 +1,6 @@
 {
   "name": "honeyprompt",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "exports": "./src/main.ts",
   "tasks": {
     "start": "deno run --allow-net --allow-read --allow-write --allow-env --allow-ffi src/main.ts",
