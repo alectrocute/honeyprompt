@@ -1,6 +1,6 @@
 {
   "name": "honeyprompt",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "exports": "./src/main.ts",
   "tasks": {
     "start": "deno run --allow-net --allow-read --allow-write --allow-env --allow-ffi src/main.ts",
@@ -28,8 +28,13 @@
   },
   "lint": {
     "rules": {
-      "tags": ["recommended"]
+      "tags": [
+        "recommended"
+      ]
     }
   },
-  "exclude": ["dist/", "node_modules/"]
+  "exclude": [
+    "dist/",
+    "node_modules/"
+  ]
 }
