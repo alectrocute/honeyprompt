@@ -130,7 +130,7 @@ For a persistent deployment, use the included [`compose.yaml`](./compose.yaml). 
 [deployment guide](./DEPLOYMENT.md) covers Docker Hub releases, required GitHub secrets, port and
 firewall setup, panel access over SSH, upgrades, rollback, event storage, and isolation.
 
-## Why deception, briefly
+## Why LLM-first deception, briefly
 
 A honeypot only has to do one thing well: stay convincing long enough that the attacker keeps
 typing. Every command they run is intelligence — the tools they reach for, the credentials they
