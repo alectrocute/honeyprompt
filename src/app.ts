@@ -9,6 +9,8 @@ import { createProviders } from "./providers/registry.ts";
 import type { Provider } from "./providers/types.ts";
 import { createService } from "./services/registry.ts";
 import type { Service } from "./services/types.ts";
+import { createEventSinks } from "./sinks/registry.ts";
+import type { SinkFanout } from "./sinks/fanout.ts";
 import { FileSink } from "./util/file-sink.ts";
 
 /**
@@ -24,21 +26,22 @@ export class App {
   private readonly pool?: ProviderPool;
   private readonly services: Service[] = [];
   private readonly panel?: Panel;
-  private readonly sinks: FileSink[] = [];
+  private readonly logSinks: FileSink[] = [];
+  private readonly eventSinks?: SinkFanout;
   private stopping = false;
 
   constructor(private readonly config: HoneypromptConfig) {
-    const logSink = config.logging.file ? this.openSink(config.logging.file) : undefined;
+    const logSink = config.logging.file ? this.openLogSink(config.logging.file) : undefined;
     this.logger = createLogger(
       config.logging.level,
       config.logging.format,
       logSink && ((line) => logSink.writeLine(line)),
     );
 
-    const eventSink = config.events.file ? this.openSink(config.events.file) : undefined;
+    this.eventSinks = createEventSinks(config.events, this.logger, this.metrics);
     this.events = new EventBus(
       config.events.buffer,
-      eventSink && ((event) => eventSink.writeLine(JSON.stringify(event))),
+      this.eventSinks && ((event) => this.eventSinks!.write(event)),
     );
 
     this.providers = createProviders(config.providers);
@@ -97,9 +100,9 @@ export class App {
     );
   }
 
-  private openSink(path: string): FileSink {
+  private openLogSink(path: string): FileSink {
     const sink = new FileSink(path);
-    this.sinks.push(sink);
+    this.logSinks.push(sink);
     return sink;
   }
 
@@ -108,6 +111,7 @@ export class App {
       services: this.config.services.length,
       providers: this.config.providers.length,
       poolStrategy: this.config.pool.strategy,
+      eventSinks: this.eventSinks?.sinks.length ?? 0,
     });
     for (const svc of this.services) {
       try {
@@ -133,7 +137,12 @@ export class App {
       ...this.services.map((s) => s.stop()),
       this.panel?.stop() ?? Promise.resolve(),
     ]);
-    // Flush disk sinks last so shutdown logs and final events are captured.
-    await Promise.allSettled(this.sinks.map((sink) => sink.close()));
+    // Flush event sinks then operational log sinks so final events and
+    // shutdown logs are captured.
+    if (this.eventSinks) {
+      await this.eventSinks.flush();
+      await this.eventSinks.close();
+    }
+    await Promise.allSettled(this.logSinks.map((sink) => sink.close()));
   }
 }

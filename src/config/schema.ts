@@ -34,6 +34,55 @@ export interface PanelConfig {
   auth?: BasicAuthConfig;
 }
 
+export const SINK_TYPES = ["file", "webhook", "crowdstrike"] as const;
+export type SinkType = (typeof SINK_TYPES)[number];
+
+export const WEBHOOK_FORMATS = ["ndjson", "json-array"] as const;
+export type WebhookFormat = (typeof WEBHOOK_FORMATS)[number];
+
+/** Shared delivery knobs for HTTP-batched sinks. */
+export interface SinkDeliveryConfig {
+  batchSize: number;
+  flushIntervalMs: number;
+  timeoutMs: number;
+  retries: number;
+  queueCapacity: number;
+  /** Scrub secrets before export. Remote sinks default on; file defaults off. */
+  redact: boolean;
+}
+
+export interface FileEventSinkConfig {
+  name: string;
+  type: "file";
+  path: string;
+  redact: boolean;
+}
+
+export interface WebhookEventSinkConfig extends SinkDeliveryConfig {
+  name: string;
+  type: "webhook";
+  url: string;
+  headers?: Record<string, string>;
+  format: WebhookFormat;
+}
+
+export interface CrowdStrikeEventSinkConfig extends SinkDeliveryConfig {
+  name: string;
+  type: "crowdstrike";
+  /** HEC ingest URL from the Falcon NG-SIEM data connector. */
+  url: string;
+  /** Name of the environment variable holding the HEC API token. */
+  tokenEnv: string;
+  sourcetype: string;
+  source: string;
+  host: string;
+}
+
+export type EventSinkConfig =
+  | FileEventSinkConfig
+  | WebhookEventSinkConfig
+  | CrowdStrikeEventSinkConfig;
+
 /**
  * Deception events: the captured attacker activity — every connection, auth
  * attempt, command, and the response honeyprompt returned. This is the honey.
@@ -41,8 +90,14 @@ export interface PanelConfig {
 export interface EventsConfig {
   /** Size of the in-memory ring buffer surfaced by the panel. */
   buffer: number;
-  /** Optional path to persist every event to, as JSON Lines (one event per line). */
+  /**
+   * Optional path to persist every event to, as JSON Lines (one event per line).
+   * Shorthand for a `type: file` sink; merged with `sinks` (same path is not
+   * opened twice).
+   */
   file?: string;
+  /** Zero or more outbound destinations for deception events. */
+  sinks: EventSinkConfig[];
 }
 
 export interface RateLimitConfig {

@@ -1,6 +1,9 @@
 import { parse as parseYaml } from "@std/yaml";
 import {
   type CommandRule,
+  type CrowdStrikeEventSinkConfig,
+  type EventSinkConfig,
+  type FileEventSinkConfig,
   type HoneypromptConfig,
   LOG_FORMATS,
   LOG_LEVELS,
@@ -11,6 +14,9 @@ import {
   type ProviderConfig,
   SERVICE_PROTOCOLS,
   type ServiceConfig,
+  SINK_TYPES,
+  WEBHOOK_FORMATS,
+  type WebhookEventSinkConfig,
 } from "./schema.ts";
 
 export class ConfigError extends Error {
@@ -281,6 +287,98 @@ function parseNamedPools(raw: unknown, providers: ProviderConfig[]): NamedPoolCo
   });
 }
 
+const DEFAULT_HTTP_BATCH = {
+  batchSize: 50,
+  flushIntervalMs: 2000,
+  timeoutMs: 10_000,
+  retries: 3,
+  queueCapacity: 1000,
+} as const;
+
+function parseDelivery(
+  o: Obj,
+  path: string,
+  redactDefault: boolean,
+): {
+  batchSize: number;
+  flushIntervalMs: number;
+  timeoutMs: number;
+  retries: number;
+  queueCapacity: number;
+  redact: boolean;
+} {
+  return {
+    batchSize: num(o, "batchSize", path, DEFAULT_HTTP_BATCH.batchSize),
+    flushIntervalMs: num(o, "flushIntervalMs", path, DEFAULT_HTTP_BATCH.flushIntervalMs),
+    timeoutMs: num(o, "timeoutMs", path, DEFAULT_HTTP_BATCH.timeoutMs),
+    retries: num(o, "retries", path, DEFAULT_HTTP_BATCH.retries),
+    queueCapacity: num(o, "queueCapacity", path, DEFAULT_HTTP_BATCH.queueCapacity),
+    redact: bool(o, "redact", redactDefault),
+  };
+}
+
+function parseEventSink(raw: unknown, i: number): EventSinkConfig {
+  const path = `events.sinks[${i}]`;
+  const o = asObj(raw, path);
+  const type = oneOf(o, "type", path, SINK_TYPES);
+  const name = str(o, "name", path);
+
+  if (type === "file") {
+    const cfg: FileEventSinkConfig = {
+      name,
+      type,
+      path: str(o, "path", path),
+      redact: bool(o, "redact", false),
+    };
+    return cfg;
+  }
+
+  if (type === "webhook") {
+    let headers: Record<string, string> | undefined;
+    const hRaw = o["headers"];
+    if (hRaw !== undefined) {
+      const h = asObj(hRaw, `${path}.headers`);
+      headers = {};
+      for (const [k, v] of Object.entries(h)) headers[k] = String(v);
+    }
+    const cfg: WebhookEventSinkConfig = {
+      name,
+      type,
+      url: str(o, "url", path),
+      headers,
+      format: oneOf(o, "format", path, WEBHOOK_FORMATS, "ndjson"),
+      ...parseDelivery(o, path, true),
+    };
+    return cfg;
+  }
+
+  // crowdstrike
+  const cfg: CrowdStrikeEventSinkConfig = {
+    name,
+    type,
+    url: str(o, "url", path),
+    tokenEnv: str(o, "tokenEnv", path),
+    sourcetype: str(o, "sourcetype", path, "honeyprompt"),
+    source: str(o, "source", path, "honeyprompt"),
+    host: str(o, "host", path, "honeyprompt"),
+    ...parseDelivery(o, path, true),
+  };
+  return cfg;
+}
+
+function parseEventSinks(raw: unknown): EventSinkConfig[] {
+  if (raw === undefined) return [];
+  const sinks = asArray(raw, "events.sinks").map(parseEventSink);
+  const names = new Set<string>();
+  for (const sink of sinks) {
+    if (names.has(sink.name)) {
+      throw new ConfigError(`events.sinks: duplicate name "${sink.name}"`);
+    }
+    names.add(sink.name);
+  }
+  return sinks;
+}
+
 export function parseConfig(rawInput: unknown): HoneypromptConfig {
   const raw = interpolateEnv(rawInput);
   const root = asObj(raw, "root");
@@ -352,6 +450,7 @@ export function parseConfig(rawInput: unknown): HoneypromptConfig {
     events: {
       buffer: num(eventsRaw, "buffer", "events", 1000),
       file: optStr(eventsRaw, "file"),
+      sinks: parseEventSinks(eventsRaw["sinks"]),
     },
     providers,
     pool: parsePool(root["pool"], providers),

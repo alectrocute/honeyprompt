@@ -127,7 +127,7 @@ Deno.test("App persists TCP connect and command events as JSON Lines", async () 
     logging: { level: "error", format: "text" },
     metrics: { enabled: false },
     panel: { enabled: false, address: "127.0.0.1:0" },
-    events: { buffer: 20, file: eventFile },
+    events: { buffer: 20, file: eventFile, sinks: [] },
     providers: [],
     pool: { strategy: "round-robin", order: [] },
     pools: [],

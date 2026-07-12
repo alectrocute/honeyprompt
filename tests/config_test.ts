@@ -143,6 +143,105 @@ services:
   assertEquals(c.logging.file, "/var/log/honeyprompt/honeyprompt.log");
   assertEquals(c.events.file, "/var/log/honeyprompt/events.jsonl");
   assertEquals(c.events.buffer, 500);
+  assertEquals(c.events.sinks, []);
+});
+
+Deno.test("parseConfig parses webhook and crowdstrike event sinks", () => {
+  const c = parseConfig(cfg(`
+events:
+  sinks:
+    - name: hook
+      type: webhook
+      url: https://example.com/hooks/hp
+      format: json-array
+      headers:
+        X-Token: "\${HOOK_TOKEN:-none}"
+    - name: crowdstrike
+      type: crowdstrike
+      url: https://abc.ingest.us-1.crowdstrike.com
+      tokenEnv: CROWDSTRIKE_HEC_TOKEN
+      host: decoy-1
+      batchSize: 25
+services:
+  - protocol: tcp
+    address: ":1"
+    description: x
+    commands:
+      - regex: "^.*$"
+        handler: "hi"
+`));
+  assertEquals(c.events.sinks.length, 2);
+  assertEquals(c.events.sinks[0], {
+    name: "hook",
+    type: "webhook",
+    url: "https://example.com/hooks/hp",
+    format: "json-array",
+    headers: { "X-Token": "none" },
+    batchSize: 50,
+    flushIntervalMs: 2000,
+    timeoutMs: 10_000,
+    retries: 3,
+    queueCapacity: 1000,
+    redact: true,
+  });
+  assertEquals(c.events.sinks[1], {
+    name: "crowdstrike",
+    type: "crowdstrike",
+    url: "https://abc.ingest.us-1.crowdstrike.com",
+    tokenEnv: "CROWDSTRIKE_HEC_TOKEN",
+    sourcetype: "honeyprompt",
+    source: "honeyprompt",
+    host: "decoy-1",
+    batchSize: 25,
+    flushIntervalMs: 2000,
+    timeoutMs: 10_000,
+    retries: 3,
+    queueCapacity: 1000,
+    redact: true,
+  });
+});
+
+Deno.test("parseConfig rejects invalid event sinks", () => {
+  const base = STATIC_SERVICE;
+  assertThrows(
+    () =>
+      parseConfig(cfg(`
+events:
+  sinks:
+    - name: bad
+      type: syslog
+      url: http://x
+${base}`)),
+    ConfigError,
+    "events.sinks[0].type",
+  );
+  assertThrows(
+    () =>
+      parseConfig(cfg(`
+events:
+  sinks:
+    - name: cs
+      type: crowdstrike
+      url: https://abc.ingest.us-1.crowdstrike.com
+${base}`)),
+    ConfigError,
+    "tokenEnv",
+  );
+  assertThrows(
+    () =>
+      parseConfig(cfg(`
+events:
+  sinks:
+    - name: dup
+      type: file
+      path: /tmp/a.jsonl
+    - name: dup
+      type: file
+      path: /tmp/b.jsonl
+${base}`)),
+    ConfigError,
+    "duplicate",
+  );
 });
 
 Deno.test("parseConfig pins a service to specific providers", () => {

@@ -23,6 +23,24 @@ events:
   buffer: 2000 # recent events kept in memory for the live panel
   # Local runs use ./data; the container sets HONEYPROMPT_EVENT_FILE=/data/events.jsonl.
   file: "${HONEYPROMPT_EVENT_FILE:-./data/events.jsonl}"
+  # Optional outbound sinks. The local `file` above stays full-fidelity; remote
+  # sinks redact passwords and Authorization/Cookie headers by default.
+  # sinks:
+  #   - name: crowdstrike
+  #     type: crowdstrike
+  #     # API URL from Falcon console → Next-Gen SIEM → Data connectors (HEC).
+  #     # A bare host gets /services/collector appended automatically.
+  #     url: "${CROWDSTRIKE_HEC_URL}"
+  #     tokenEnv: CROWDSTRIKE_HEC_TOKEN
+  #     sourcetype: honeyprompt
+  #     source: honeyprompt
+  #     host: "${HOSTNAME:-honeyprompt}"
+  #     batchSize: 50
+  #     flushIntervalMs: 2000
+  #   - name: webhook
+  #     type: webhook
+  #     url: "${HONEYPROMPT_WEBHOOK_URL}"
+  #     format: ndjson # or json-array
 
 panel:
   enabled: true

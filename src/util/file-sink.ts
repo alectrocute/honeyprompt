@@ -24,6 +24,11 @@ export class FileSink {
     this.tail = this.tail.then(() => writeAll(this.file, bytes)).catch(() => {});
   }
 
+  /** Waits for queued writes to land without closing the handle. */
+  async flush(): Promise<void> {
+    await this.tail;
+  }
+
   async close(): Promise<void> {
     if (this.closed) return;
     this.closed = true;

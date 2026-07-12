@@ -116,5 +116,7 @@ retained across container replacement.
 
 Run honeyprompt on an isolated host or network segment with no route to production systems. Do not
 mount the Docker socket, host filesystem, SSH keys, cloud credentials, or real application data into
-the container. Forward `events.jsonl` to durable storage or your SIEM, and monitor provider
-spending.
+the container. Persist `events.jsonl` (or forward it with a collector), and/or configure an outbound
+sink such as CrowdStrike HEC under `events.sinks`. Monitor provider spending and sink delivery
+errors in the operational logs / Prometheus metrics (`honeyprompt_sink_events_total`,
+`honeyprompt_sink_dropped_total`).

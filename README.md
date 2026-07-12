@@ -158,6 +158,36 @@ logging:
 replay with `jq`. The Docker commands above mount the named volume `honeyprompt-data` at `/data`, so
 events survive container replacement. Both files are appended to and flushed on a clean shutdown.
 
+### Outbound event sinks
+
+Beyond the local JSONL file, honeyprompt can push deception events to remote collectors. Configure
+them under `events.sinks`. Remote sinks redact captured passwords and common secret-bearing HTTP
+headers by default; the on-disk file stays full-fidelity for forensics.
+
+| `type`        | Purpose                                                    |
+| ------------- | ---------------------------------------------------------- |
+| `file`        | Extra JSONL path (same format as `events.file`)            |
+| `webhook`     | Generic HTTPS POST (`ndjson` or `json-array`)              |
+| `crowdstrike` | Falcon Next-Gen SIEM / LogScale HTTP Event Collector (HEC) |
+
+CrowdStrike example — create an **HEC/HTTP Event Data Connector** in the Falcon console (Next-Gen
+SIEM → Data ingestion → Data connectors), then:
+
+```yaml
+events:
+  file: /data/events.jsonl
+  sinks:
+    - name: crowdstrike
+      type: crowdstrike
+      url: "${CROWDSTRIKE_HEC_URL}" # e.g. https://<id>.ingest.us-1.crowdstrike.com
+      tokenEnv: CROWDSTRIKE_HEC_TOKEN
+      host: "${HOSTNAME:-honeyprompt}"
+```
+
+Set `CROWDSTRIKE_HEC_URL` and `CROWDSTRIKE_HEC_TOKEN` in the environment (never in the YAML). If the
+URL has no path, honeyprompt appends `/services/collector`. Events are batched, retried on
+408/429/5xx, and flushed on clean shutdown.
+
 `format` only affects how operational logs are rendered to the console; the operational log _file_,
 when enabled, is always structured JSON so it's easy to parse.
 
