@@ -39,9 +39,14 @@ panel:
 # rate limits. Keys come from environment variables, never from this file.
 # ---------------------------------------------------------------------------
 providers:
-  - name: openrouter
+  - name: openrouter-generic-free
     type: openrouter
     model: openrouter/free
+    apiKeyEnv: OPENROUTER_API_KEY
+
+  - name: openrouter-gemma-free
+    type: openrouter
+    model: google/gemma-4-26b-a4b-it-20260403:free
     apiKeyEnv: OPENROUTER_API_KEY
 
   # - name: local-ollama
@@ -121,7 +126,7 @@ services:
     llm:
       enabled: true
       historyLimit: 0
-      providers: [openrouter]
+      providers: [openrouter-gemma-free]
       prompt: |
         You are the web server of an internal corporate
         intranet accidentally exposed to the internet. For every request,
@@ -144,6 +149,31 @@ services:
         statusCode: 404
         headers: ["Content-Type: text/html"]
         handler: "<html><head><title>404 Not Found</title></head><body><center><h1>404 Not Found</h1></center><hr><center>nginx/1.29.1</center></body></html>"
+      - regex: "^GET /$"
+        statusCode: 200
+        headers: ["Content-Type: text/html"]
+        handler: |
+          <!DOCTYPE html>
+          <html>
+          <head>
+          <title>Welcome to nginx!</title>
+          <style>
+              html { color-scheme: light dark; }
+              body { width: 35em; margin: 0 auto;
+              font-family: Tahoma, Verdana, Arial, sans-serif; }
+          </style>
+          </head>
+          <body>
+          <h1>Welcome to nginx!</h1>
+          <p>If you see this page, the nginx web server is successfully installed and
+          working. Further configuration is required.</p>
+          <p>For online documentation and support please refer to
+          <a href="http://nginx.org/">nginx.org</a>.<br/>
+          Commercial support is available at
+          <a href="http://nginx.com/">nginx.com</a>.</p>
+          <p><em>Thank you for using nginx.</em></p>
+          </body>
+          </html>
       - regex: "^.*$"
         llm: true
 
@@ -158,7 +188,7 @@ services:
     llm:
       enabled: true
       historyLimit: 0
-      providers: [openrouter]
+      providers: [openrouter-generic-free]
       prompt: |
         You are an internal Model Context Protocol gateway using JSON-RPC 2.0
         over Streamable HTTP. Return only the JSON response body. Support
@@ -204,7 +234,7 @@ services:
     llm:
       enabled: true
       historyLimit: 0
-      providers: [openrouter]
+      providers: [openrouter-generic-free]
       prompt: |
         You are Docker Engine 29.5.3 speaking REST API v1.54 on an
         unauthenticated Linux daemon. Return only the JSON response body.
@@ -248,7 +278,7 @@ services:
     llm:
       enabled: true
       historyLimit: 0
-      providers: [openrouter]
+      providers: [openrouter-generic-free]
       prompt: |
         You are a Kubernetes v1.36.1 API server reached through kubectl proxy.
         Return only the JSON response body for the requested Kubernetes API.
@@ -289,7 +319,7 @@ services:
     llm:
       enabled: true
       historyLimit: 30
-      providers: [openrouter]
+      providers: [openrouter-generic-free]
       prompt: |
         You are bash on an Ubuntu 26.04 LTS GPU build runner named
         gpu-runner-07. It runs Docker Engine 29.5.3, Kubernetes tooling,

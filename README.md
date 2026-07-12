@@ -43,7 +43,7 @@ docker compose up -d
 **4. Poke it:**
 
 ```bash
-curl http://localhost/                # LLM-generated corporate intranet
+curl http://localhost/                # default nginx welcome page (no LLM)
 ssh -p 2222 root@localhost            # password: root — then type anything
 curl http://localhost:2375/v1.54/containers/json   # "exposed" Docker API
 ```
@@ -59,8 +59,9 @@ is not recommended for production deployments.
 The [`honeyprompt.yaml`](./honeyprompt.yaml) you just downloaded is a fully annotated showcase. It
 ships profiles for:
 
-- **A generic corporate web server** — port 80, the widest net; the LLM renders full HTML/CSS
-  intranet pages, login forms, and admin panels built to keep the attacker clicking.
+- **A generic corporate web server** — port 80, the widest net; `/` serves the stock nginx welcome
+  page instantly, and deeper paths fall through to the LLM for full HTML/CSS intranet pages, login
+  forms, and admin panels built to keep the attacker clicking.
 - **MCP / agent gateways** — Streamable HTTP discovery, OAuth metadata, JSON-RPC tool calls, and
   tempting production tools.
 - **Docker Engine API 29.5** — the unauthenticated port 2375 surface used by real cloud worms.
