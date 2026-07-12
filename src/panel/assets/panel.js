@@ -2,7 +2,7 @@
 "use strict";
 
 const MAX_EVENTS = 1000;
-const PREVIEW_COLUMNS = 9; // keep in sync with the table header
+const PREVIEW_COLUMNS = 8; // keep in sync with the table header
 
 const el = {
   stats: document.getElementById("stats"),
@@ -70,7 +70,6 @@ function renderRow(e) {
       <td><span class="src src-${e.source}">${e.source}</span></td>
       <td>${ioCell(e.input, "in")}</td>
       <td>${ioCell(e.output, "")}</td>
-      <td>${providerCell(e)}</td>
       <td class="ms">${e.latencyMs ?? ""}</td>
     </tr>`;
   return open ? preview + renderDetail(e) : preview;
@@ -79,14 +78,6 @@ function renderRow(e) {
 function ioCell(value, extra) {
   if (!value) return `<span class="io-empty">—</span>`;
   return `<div class="io ${extra}">${escapeHtml(value)}</div>`;
-}
-
-function providerCell(e) {
-  if (!e.provider) return "";
-  const model = e.model
-    ? `<div class="prov-model" title="${escapeHtml(e.model)}">${escapeHtml(e.model)}</div>`
-    : "";
-  return `<div class="prov-name mono">${escapeHtml(e.provider)}</div>${model}`;
 }
 
 function metaItem(key, value) {

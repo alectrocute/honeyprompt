@@ -1,18 +1,22 @@
 :root {
-  --bg: #0a0c10;
-  --surface: #111520;
-  --surface-2: #161b28;
-  --border: #222836;
-  --border-soft: #1a2030;
-  --text: #e7ebf3;
-  --muted: #7d879c;
-  --honey: #f0b429;
-  --honey-dim: #b9861a;
-  --http: #5aa2f0;
-  --ssh: #4ec9a8;
-  --tcp: #e5b567;
-  --telnet: #b98cf0;
-  --red: #e06c75;
+  /* Warm amber on slate — honey brand without the pumpkin-orange punch. */
+  --honey: #fca241;
+  --honey-bright: #e0b888;
+  --honey-dim: #8f6b45;
+  --honey-cream: #f0e6d4;
+  --honey-glow: rgba(212, 165, 116, 0.22);
+  --bg: #121212;
+  --surface: #121212;
+  --surface-2: #121212;
+  --border: #2a303c;
+  --border-soft: #1c212b;
+  --text: #ebe6df;
+  --muted: #8b919c;
+  --http: #6ba3e0;
+  --ssh: #5cb8a0;
+  --tcp: #c4a882;
+  --telnet: #9a8fc0;
+  --red: #d47880;
 
   --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
   --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -33,9 +37,7 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background:
-    radial-gradient(1200px 600px at 100% -10%, rgba(240, 180, 41, 0.05), transparent 60%),
-    var(--bg);
+  background: var(--bg);
   color: var(--text);
   font: 14px/1.55 var(--sans);
   -webkit-font-smoothing: antialiased;
@@ -62,14 +64,18 @@ body {
 }
 
 .wordmark {
-  font-weight: 650;
+  font-weight: 700;
   font-size: 17px;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
+  color: var(--honey);
 }
 
 .subtitle {
   color: var(--muted);
-  font-size: 12.5px;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
 }
 
 .pulse {
@@ -78,21 +84,21 @@ body {
   height: 8px;
   border-radius: 50%;
   background: var(--honey);
-  box-shadow: 0 0 0 0 rgba(240, 180, 41, 0.5);
+  box-shadow: 0 0 0 0 var(--honey-glow);
   animation: pulse 2.4s infinite;
 }
 
 @keyframes pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(240, 180, 41, 0.45);
+    box-shadow: 0 0 0 0 var(--honey-glow);
   }
 
   70% {
-    box-shadow: 0 0 0 7px rgba(240, 180, 41, 0);
+    box-shadow: 0 0 0 7px rgba(212, 165, 116, 0);
   }
 
   100% {
-    box-shadow: 0 0 0 0 rgba(240, 180, 41, 0);
+    box-shadow: 0 0 0 0 rgba(212, 165, 116, 0);
   }
 }
 
@@ -139,7 +145,7 @@ main {
 }
 
 .tile.accent .value {
-  color: var(--honey);
+  color: var(--honey-bright);
 }
 
 /* ---- toolbar ---------------------------------------------------------- */
@@ -169,11 +175,11 @@ main {
 
 .chip:hover {
   color: var(--text);
-  border-color: var(--muted);
+  border-color: color-mix(in srgb, var(--honey) 45%, var(--border));
 }
 
 .chip.is-active {
-  color: var(--bg);
+  color: #14110c;
   background: var(--honey);
   border-color: var(--honey);
   font-weight: 600;
@@ -193,6 +199,7 @@ main {
 .search:focus {
   outline: none;
   border-color: var(--honey-dim);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--honey) 18%, transparent);
 }
 
 .toolbar-actions {
@@ -208,12 +215,13 @@ main {
   padding: 8px 14px;
   font: 13px var(--sans);
   cursor: pointer;
-  transition: border-color 0.12s, background 0.12s;
+  transition: border-color 0.12s, background 0.12s, color 0.12s;
 }
 
 .btn:hover {
-  border-color: var(--muted);
+  border-color: color-mix(in srgb, var(--honey) 50%, var(--border));
   background: var(--surface-2);
+  color: var(--honey-cream);
 }
 
 /* ---- table ------------------------------------------------------------ */
@@ -262,10 +270,6 @@ thead th {
   width: 84px;
 }
 
-.col-prov {
-  width: 130px;
-}
-
 .col-ms {
   width: 56px;
   text-align: right;
@@ -286,11 +290,11 @@ tbody td {
 }
 
 .row:hover {
-  background: var(--surface-2);
+  background: color-mix(in srgb, var(--honey) 4%, var(--surface-2));
 }
 
 .row.is-open {
-  background: var(--surface-2);
+  background: color-mix(in srgb, var(--honey) 6%, var(--surface-2));
 }
 
 .caret {
@@ -319,24 +323,6 @@ tbody td {
   font-family: var(--mono);
 }
 
-/* provider + model, stacked in the Provider column */
-.prov-name {
-  font-size: 12.5px;
-  color: var(--text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.prov-model {
-  font: 11px var(--mono);
-  color: var(--muted);
-  margin-top: 2px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 /* protocol + source badges */
 .badge {
   display: inline-block;
@@ -358,7 +344,8 @@ tbody td {
 
 .proto-tcp {
   color: var(--tcp);
-  border-color: color-mix(in srgb, var(--tcp) 35%, transparent);
+  border-color: color-mix(in srgb, var(--tcp) 40%, transparent);
+  background: color-mix(in srgb, var(--honey) 10%, transparent);
 }
 
 .proto-telnet {
@@ -371,7 +358,7 @@ tbody td {
 }
 
 .src-llm {
-  color: var(--honey);
+  color: var(--honey-bright);
 }
 
 .src-static {
@@ -421,7 +408,7 @@ tbody td {
 .detail td {
   padding: 0;
   border-bottom: 1px solid var(--border-soft);
-  background: #0c0f16;
+  background: var(--surface-2);
 }
 
 .detail-grid {
@@ -439,7 +426,7 @@ tbody td {
 }
 
 .pane {
-  background: #0c0f16;
+  background: var(--surface-2);
   padding: 14px 18px 16px;
   min-width: 0;
 }
