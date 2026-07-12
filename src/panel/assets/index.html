@@ -1,68 +1,66 @@
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>honeyprompt</title>
+    <link rel="stylesheet" href="panel.css" />
+  </head>
 
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>honeyprompt</title>
-  <link rel="stylesheet" href="panel.css" />
-</head>
-
-<body>
-  <header class="topbar">
-    <div class="brand">
-      <span class="wordmark">honeyprompt</span>
-    </div>
-    <div class="topbar-meta">
-      <span id="clock" class="clock"></span>
-    </div>
-  </header>
-
-  <main>
-    <section id="stats" class="stats"></section>
-
-    <div class="toolbar">
-      <div class="filters" id="protocols">
-        <button class="chip is-active" data-protocol="">all</button>
-        <button class="chip" data-protocol="http">http</button>
-        <button class="chip" data-protocol="ssh">ssh</button>
-        <button class="chip" data-protocol="tcp">tcp</button>
-        <button class="chip" data-protocol="telnet">telnet</button>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="wordmark">honeyprompt</span>
       </div>
-      <input id="search" class="search" type="search" placeholder="Search input, output, host…" />
-      <div class="toolbar-actions">
-        <button id="pause" class="btn">Pause</button>
-        <button id="export" class="btn">Export</button>
+      <div class="topbar-meta">
+        <span id="clock" class="clock"></span>
       </div>
-    </div>
+    </header>
 
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th class="col-caret" aria-label="expand"></th>
-            <th class="col-time">Time</th>
-            <th class="col-proto">Proto</th>
-            <th class="col-remote">Remote</th>
-            <th class="col-src">Source</th>
+    <main>
+      <section id="stats" class="stats"></section>
+
+      <div class="toolbar">
+        <div class="filters" id="protocols">
+          <button class="chip is-active" data-protocol="">all</button>
+          <button class="chip" data-protocol="http">http</button>
+          <button class="chip" data-protocol="ssh">ssh</button>
+          <button class="chip" data-protocol="tcp">tcp</button>
+          <button class="chip" data-protocol="telnet">telnet</button>
+        </div>
+        <input id="search" class="search" type="search" placeholder="Search input, output, host…" />
+        <div class="toolbar-actions">
+          <button id="pause" class="btn">Pause</button>
+          <button id="export" class="btn">Export</button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th class="col-caret" aria-label="expand"></th>
+              <th class="col-time">Time</th>
+              <th class="col-proto">Proto</th>
+              <th class="col-remote">Remote</th>
+              <th class="col-src">Source</th>
               <th class="col-io">Input</th>
               <th class="col-io">Output</th>
               <th class="col-ms">ms</th>
-          </tr>
-        </thead>
-        <tbody id="rows"></tbody>
-      </table>
-      <p id="empty" class="empty">Waiting for the first knock…</p>
-    </div>
-  </main>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+        <p id="empty" class="empty">Waiting for the first knock…</p>
+      </div>
+    </main>
 
-  <footer class="statusbar">
-    <span id="count" class="muted"></span>
-    <span class="spacer"></span>
-    <span id="conn" class="muted">connecting…</span>
-  </footer>
+    <footer class="statusbar">
+      <span id="count" class="muted"></span>
+      <span class="spacer"></span>
+      <span id="conn" class="muted">connecting…</span>
+    </footer>
 
-  <script src="panel.js"></script>
-</body>
-
+    <script src="panel.js"></script>
+  </body>
 </html>
