@@ -282,8 +282,14 @@ registerHook({
 });
 ```
 
-Reference it by name from any service's `hooks:` list. A built-in `redact-secrets` hook ships
-enabled in the example config so the model can never echo a real credential back out.
+Reference it by name from any service's `hooks:` list. Built-in hooks that ship enabled in the
+example config:
+
+- `strip-llm-meta` — strips leading/trailing markdown code fences (including language tags like
+  html/json/js), strips accidental HTTP status/header envelopes from response bodies, and drops
+  placeholders like `(no output)` and conversational refusals ("I can't help you do that") so the
+  attacker sees silence instead of assistant chatter
+- `redact-secrets` — scrubs anything that looks like a real API key/token before it leaves
 
 ## Metrics
 

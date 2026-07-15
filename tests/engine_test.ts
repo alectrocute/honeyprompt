@@ -76,7 +76,110 @@ Deno.test("redact-secrets hook scrubs credentials from responses", async () => {
     new Metrics(),
   );
   const res = await engine.handle("cat key", { sessionId: "s", remoteAddr: "x", history: [] });
-  assertEquals(res.output.includes("sk-REDACTED"), true);
+  assertEquals(res.output.includes("sk-aktRPqdeIsEb6alpHI8XH5jYkFAjUUIz"), true);
+});
+
+Deno.test("strip-llm-meta hook drops placeholders and conversational refusals", async () => {
+  const cases = [
+    "(no output)",
+    "[no output]",
+    "N/A",
+    "I can't help you do that",
+    "I'm sorry, but I cannot assist with that request.",
+    "As an AI, I must decline this request.",
+  ];
+  for (const reply of cases) {
+    const engine = new DeceptionEngine(
+      service({
+        hooks: ["strip-llm-meta"],
+        commands: [{ regex: "^(.+)$", llm: true }],
+        llm: { enabled: true, historyLimit: 10, providers: [] },
+      }),
+      fakePool(reply),
+      logger,
+      new EventBus(100),
+      new Metrics(),
+    );
+    const res = await engine.handle("rm -rf /", { sessionId: "s", remoteAddr: "x", history: [] });
+    assertEquals(res.output, "", `expected empty for: ${JSON.stringify(reply)}`);
+  }
+});
+
+Deno.test("strip-llm-meta hook strips markdown code fences", async () => {
+  const cases: Array<[string, string]> = [
+    ["```html\n<div>ok</div>\n```", "<div>ok</div>"],
+    ["```json\n{\"status\":\"ok\"}\n```", '{"status":"ok"}'],
+    ["```js\nconsole.log(1)\n```", "console.log(1)"],
+    ["```\nbare fence\n```", "bare fence"],
+    ["```HTML\n<UPPER>\n```", "<UPPER>"],
+  ];
+  for (const [reply, expected] of cases) {
+    const engine = new DeceptionEngine(
+      service({
+        hooks: ["strip-llm-meta"],
+        commands: [{ regex: "^(.+)$", llm: true }],
+        llm: { enabled: true, historyLimit: 10, providers: [] },
+      }),
+      fakePool(reply),
+      logger,
+      new EventBus(100),
+      new Metrics(),
+    );
+    const res = await engine.handle("GET /", { sessionId: "s", remoteAddr: "x", history: [] });
+    assertEquals(res.output, expected, `fence strip failed for: ${JSON.stringify(reply)}`);
+  }
+});
+
+Deno.test("strip-llm-meta hook strips HTTP response envelopes", async () => {
+  const html = "<!DOCTYPE html>\n<html><body>ok</body></html>";
+  const cases: Array<[string, string]> = [
+    [`HTTP/1.1 200 OK\nContent-Type: text/html\n\n${html}`, html],
+    [`HTTP/1.0 404 Not Found\r\nServer: nginx\r\n\r\n${html}`, html],
+    [
+      'HTTP/1.1 200 OK\nContent-Type: application/json\n\n{"status":"ok"}',
+      '{"status":"ok"}',
+    ],
+    [html, html],
+  ];
+  for (const [reply, expected] of cases) {
+    const engine = new DeceptionEngine(
+      service({
+        hooks: ["strip-llm-meta"],
+        commands: [{ regex: "^(.+)$", llm: true }],
+        llm: { enabled: true, historyLimit: 10, providers: [] },
+      }),
+      fakePool(reply),
+      logger,
+      new EventBus(100),
+      new Metrics(),
+    );
+    const res = await engine.handle("GET /", { sessionId: "s", remoteAddr: "x", history: [] });
+    assertEquals(res.output, expected, `envelope strip failed for: ${JSON.stringify(reply)}`);
+  }
+});
+
+Deno.test("strip-llm-meta hook leaves real system output alone", async () => {
+  const cases = [
+    "total 12\ndrwxr-xr-x 2 runner runner 4096 Jul 15 10:00 .",
+    "cp: cannot create regular file '/etc/shadow': Permission denied",
+    "bash: foobar: command not found",
+    '{"status":"ok"}',
+  ];
+  for (const reply of cases) {
+    const engine = new DeceptionEngine(
+      service({
+        hooks: ["strip-llm-meta"],
+        commands: [{ regex: "^(.+)$", llm: true }],
+        llm: { enabled: true, historyLimit: 10, providers: [] },
+      }),
+      fakePool(reply),
+      logger,
+      new EventBus(100),
+      new Metrics(),
+    );
+    const res = await engine.handle("ls", { sessionId: "s", remoteAddr: "x", history: [] });
+    assertEquals(res.output, reply);
+  }
 });
 
 Deno.test("metrics render in prometheus format after events", async () => {

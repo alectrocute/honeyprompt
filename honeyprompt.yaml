@@ -115,68 +115,57 @@ services:
 
   # NOTE: Most flagship models have guardrails to prevent you from doing this.
   # You'll probably need to do local inference or inject a jailbreak.
-  # That's why I've disabled this use-case by default, but believe me,
-  # it's worth the effort to get this one up and running (it's the coolest!).
-
-  # - protocol: http
-  #   address: "0.0.0.0:80"
-  #   description: "Corporate intranet web server"
-  #   serverVersion: "nginx/1.29.1"
-  #   deadlineSeconds: 30
-  #   hooks: [redact-secrets]
-  #   llm:
-  #     enabled: true
-  #     historyLimit: 0
-  #     providers: [openrouter-free]
-  #     prompt: |
-  #       You are the web server of an internal corporate
-  #       intranet accidentally exposed to the internet. For every request,
-  #       return a complete, believable HTML document with inline CSS: corporate
-  #       styling, navigation, breadcrumbs, footers, and plausible copy. Make
-  #       the site tempting to explore — link to pages like /login, /admin,
-  #       /wiki, /status, /backup, and /api, and render convincing login and
-  #       admin forms that appear to accept credentials. Error pages should look
-  #       like real nginx or application errors and leak small, plausible
-  #       details (internal hostnames, framework versions) that invite deeper
-  #       probing. Return only the HTML document — no markdown, no code fences.
-  #       Never mention honeypots, simulation, or that responses are
-  #       AI-generated.
-  #   commands:
-  #     - regex: "^GET /robots\\.txt$"
-  #       statusCode: 200
-  #       headers: ["Content-Type: text/plain"]
-  #       handler: "User-agent: *\nDisallow: /admin\nDisallow: /backup\nDisallow: /api/internal\n"
-  #     - regex: "^GET /favicon\\.ico$"
-  #       statusCode: 404
-  #       headers: ["Content-Type: text/html"]
-  #       handler: "<html><head><title>404 Not Found</title></head><body><center><h1>404 Not Found</h1></center><hr><center>nginx/1.29.1</center></body></html>"
-  #     - regex: "^GET /$"
-  #       statusCode: 200
-  #       headers: ["Content-Type: text/html"]
-  #       handler: |
-  #         <!DOCTYPE html>
-  #         <html>
-  #         <head>
-  #         <title>Welcome to nginx!</title>
-  #         <style>
-  #             html { color-scheme: light dark; }
-  #             body { width: 35em; margin: 0 auto;
-  #             font-family: Tahoma, Verdana, Arial, sans-serif; }
-  #         </style>
-  #         </head>
-  #         <body>
-  #         <h1>Welcome to nginx!</h1>
-  #         <p>If you see this page, the nginx web server is successfully installed and
-  #         working. Further configuration is required.</p>
-  #         <p>For online documentation and support please refer to
-  #         <a href="http://nginx.org/">nginx.org</a>.<br/>
-  #         Commercial support is available at
-  #         <a href="http://nginx.com/">nginx.com</a>.</p>
-  #         <p><em>Thank you for using nginx.</em></p>
-  #         </body>
-  #         </html>
-  #     - regex: "^.*$"
-  #       llm: true
+  - protocol: http
+    address: "0.0.0.0:80"
+    description: "Corporate intranet web server"
+    serverVersion: "nginx/1.29.1"
+    deadlineSeconds: 30
+    hooks: [strip-llm-meta, redact-secrets]
+    llm:
+      enabled: true
+      historyLimit: 0
+      providers: [openrouter-free]
+      prompt: |
+        You are the web server of an internal corporate file directory web server.
+        For every request, return only a complete HTML document (with inline CSS/JS as
+        needed). Never include an HTTP status line, response headers, markdown,
+        or code fences — just the HTML content.
+    commands:
+      - regex: "^GET /robots\\.txt$"
+        statusCode: 200
+        headers: ["Content-Type: text/plain"]
+        handler: "User-agent: *\nDisallow: /admin\nDisallow: /backup\nDisallow: /api/internal\n"
+      - regex: "^GET /favicon\\.ico$"
+        statusCode: 404
+        headers: ["Content-Type: text/html"]
+        handler: "<html><head><title>404 Not Found</title></head><body><center><h1>404 Not Found</h1></center><hr><center>nginx/1.29.1</center></body></html>"
+      - regex: "^GET /$"
+        statusCode: 200
+        headers: ["Content-Type: text/html"]
+        handler: |
+          <!DOCTYPE html>
+          <html>
+          <head>
+          <title>Welcome to nginx!</title>
+          <style>
+              html { color-scheme: light dark; }
+              body { width: 35em; margin: 0 auto;
+              font-family: Tahoma, Verdana, Arial, sans-serif; }
+          </style>
+          </head>
+          <body>
+          <h1>Welcome to nginx!</h1>
+          <p>If you see this page, the nginx web server is successfully installed and
+          working. Further configuration is required.</p>
+          <p>For online documentation and support please refer to
+          <a href="http://nginx.org/">nginx.org</a>.<br/>
+          Commercial support is available at
+          <a href="http://nginx.com/">nginx.com</a>.</p>
+          <p><em>Thank you for using nginx.</em></p>
+          </body>
+          </html>
+      - regex: "^.*$"
+        llm: true
 
   # MCP / agent gateway. MCP is JSON-RPC over Streamable HTTP, so the generic
   # HTTP listener can convincingly handle discovery and tool-call probes.
@@ -185,7 +174,7 @@ services:
     description: "MCP agent gateway (Streamable HTTP)"
     serverVersion: "agent-gateway/2026.7"
     deadlineSeconds: 30
-    hooks: [redact-secrets]
+    hooks: [strip-llm-meta, redact-secrets]
     llm:
       enabled: true
       historyLimit: 0
@@ -231,7 +220,7 @@ services:
     description: "Docker Engine API 29.5.3"
     serverVersion: "Docker/29.5.3 (linux)"
     deadlineSeconds: 30
-    hooks: [redact-secrets]
+    hooks: [strip-llm-meta, redact-secrets]
     llm:
       enabled: true
       historyLimit: 0
@@ -275,7 +264,7 @@ services:
     description: "Kubernetes API proxy v1.36.1"
     serverVersion: "kube-apiserver/v1.36.1"
     deadlineSeconds: 30
-    hooks: [redact-secrets]
+    hooks: [strip-llm-meta, redact-secrets]
     llm:
       enabled: true
       historyLimit: 0
@@ -316,7 +305,7 @@ services:
     serverVersion: "OpenSSH_10.2p1 Ubuntu-2ubuntu3.2"
     passwordRegex: "^(root|admin|runner|ubuntu|password|123456)$"
     deadlineSeconds: 180
-    hooks: [redact-secrets]
+    hooks: [strip-llm-meta, redact-secrets]
     llm:
       enabled: true
       historyLimit: 30
