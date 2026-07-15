@@ -8,6 +8,7 @@ services:
       HONEYPROMPT_PANEL_PASSWORD: "${HONEYPROMPT_PANEL_PASSWORD:?set HONEYPROMPT_PANEL_PASSWORD in .env}"
       OPENROUTER_API_KEY: "${OPENROUTER_API_KEY:?set OPENROUTER_API_KEY in .env}"
     ports:
+      - "80:80" # corporate web server
       - "2222:2222" # SSH build runner
       - "2323:2323" # OT Telnet
       - "2375:2375" # Docker API
