@@ -108,7 +108,7 @@ Deno.test("strip-llm-meta hook drops placeholders and conversational refusals", 
 Deno.test("strip-llm-meta hook strips markdown code fences", async () => {
   const cases: Array<[string, string]> = [
     ["```html\n<div>ok</div>\n```", "<div>ok</div>"],
-    ["```json\n{\"status\":\"ok\"}\n```", '{"status":"ok"}'],
+    ['```json\n{"status":"ok"}\n```', '{"status":"ok"}'],
     ["```js\nconsole.log(1)\n```", "console.log(1)"],
     ["```\nbare fence\n```", "bare fence"],
     ["```HTML\n<UPPER>\n```", "<UPPER>"],
